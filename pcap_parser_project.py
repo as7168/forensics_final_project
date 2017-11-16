@@ -3,49 +3,32 @@ from pcapfile import savefile
 #from pcapfile.protocols.network import ip
 import binascii
 from ethernet import Ethernet
+from ip import IP
 import struct
 import time
+import ctypes
 
-class IP():
-	src = ''
-	dst = ''
-	enc_frame_type = ''
-	payload = ''
-
-	def __init__(self, packet):
-		# parse the required header first, deal with options later
-		magic = struct.unpack('!B',packet[0:1])[0]
-		#print magic
-		#time.sleep(10) 
-		magic = magic >> 4
-		print magic.raw()
-		time.sleep(10)
-		assert ((magic >> 4) == 4 and
-		        (magic & 0x0f) > 4), 'not an IPv4 packet.'
-
-		fields = struct.unpack('!BBHHHBBHII', packet[:20])
-		self.v = fields[0] >> 4
-		self.hl = fields[0] & 0x0f
-		self.tos = fields[1]
-		self.len = fields[2]
-		self.id = fields[3]
-		self.flags = fields[4] >> 13
-		self.off = fields[4] & 0x1fff
-		self.ttl = fields[5]
-		self.p = fields[6]
-		self.sum = fields[7]
-		self.src = ctypes.c_char_p(parse_ipv4(fields[8]))
-		self.dst = ctypes.c_char_p(parse_ipv4(fields[9]))
-
+#class TCP():
+#	src_port = ''
+#	dst_port = ''
 class Node():
-	ether_addr = ''
-	ip_addr = ''
-	#list of 3 tuples (ether_addr, ip_addr, application)
-	send_to = []
+	# ether_addr = ''
+	# ip_addr = ''
+	# #list of 3 tuples (ether_addr, ip_addr, application)
+	# send_to = []
+	nodes = []
 
 	def __init__(self, ether_addr, ip_addr):
 		self.ether_addr = ether_addr
 		self.ip_addr = ip_addr
+		self.send_to = []
+
+		if self not in Node.nodes:
+			Node.nodes.append(self)
+
+	def append_send_to_node(self, node):
+		if node not in self.send_to:
+			self.send_to.append(node)
 
 class Get_nodes():
 
@@ -54,7 +37,35 @@ class Get_nodes():
 		count = 1
 		for pkt in capfile.packets:
 			eth_frame = Ethernet(pkt.raw())
-			ip_frame = IP(binascii.unhexlify(eth_frame.payload))
+			if eth_frame.enc_frame_type == 'IPv4':
+				ip_frame = IP(binascii.unhexlify(eth_frame.payload))
+				dst_node = None
+				src_node = None
+				for node in Node.nodes:
+					if node.ether_addr == eth_frame.dst:
+						if node.ip_addr == ip_frame.dst:
+							dst_node = node 
+					if node.ether_addr == eth_frame.src:
+						if node.ip_addr == ip_frame.src:
+							src_node = node
+				if dst_node is None:
+					dst_node = Node(eth_frame.dst, ip_frame.dst)
+				if src_node is None:
+					src_node = Node(eth_frame.src, ip_frame.src)
+				#print 'dst_node: '+ str(dst_node)
+				#print 'src_node: '+ str(src_node)
+				src_node.append_send_to_node(dst_node)
+				# print Node.nodes
+				# for node in Node.nodes:
+				# 	print node.send_to
+				#time.sleep(5)
+				# if ip_frame.protocol == '6':
+				# 	tcp_frame = TCP(binascii.unhexlify(ip_frame.payload))
+				# elif ip_frame.protocol == '17':
+				# 	udp_frame = UDP(binascii.unhexlify(ip_frame.payload))
+			else:
+				pass
+
 			print str(count) 
 			print str(eth_frame)
 			#print ip_frame
@@ -64,7 +75,7 @@ class Get_nodes():
 
 
 def main():
-	print 'in main'
+	#print 'in main'
 	Get_nodes(open('nitroba.pcap', 'rb'))
 
 if __name__ == '__main__':
