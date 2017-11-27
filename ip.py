@@ -2,6 +2,8 @@ import struct
 import binascii
 import time
 
+PROTOCOL = {6: 'TCP', 17: 'UDP'}
+
 class IP():
 
 	def __init__(self, packet):
@@ -30,14 +32,19 @@ class IP():
 		self.off = fields[4] & 0x1fff
 		# time to live
 		self.ttl = fields[5]
-		self.protocol = fields[6]
+		self.protocol = PROTOCOL[fields[6]]
 		# header checksum
 		self.chk_sum = fields[7]
 		# source ip
 		self.src = self.parse_ipv4(fields[8])
 		# destination ip
 		self.dst = self.parse_ipv4(fields[9])
-		self.payload = binascii.hexlify(packet[20:])
+		# payload
+		self.payload = binascii.hexlify(packet[self.hl*4:])
+
+		# ip header may contain options as a ip header length ranges from 20 (header length * 4) to 60 bytes.
+		# options are not required for our purposes, so we are discarding them at this stage  
+
 
 	# helper function to parse raw ip address in dotted notation
 	def parse_ipv4(self, address):

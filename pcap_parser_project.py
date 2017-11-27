@@ -5,18 +5,32 @@ sudo pip install networkx
 sudo apt-get install python-metaplotlib
 """
 
+import networkx as nx
+import matplotlib.pyplot as plt
+
 from pcapfile import savefile
 from sets import Set
 import binascii
 # importing ethernet and ip classes to parse ethernet and ip frames of the packets
 from ethernet import Ethernet
 from ip import IP
+from tcp import TCP
+from udp import UDP
 import time
 
+
 # future work
-#class TCP():
-#	src_port = ''
-#	dst_port = ''
+class tcp_data():
+	def __init__(self, data):
+		if data.find('HTTP'):
+			self.app_protocol = 'HTTP'
+		return
+
+class udp_data():
+	def __init__(self, data):
+
+		return
+
 
 # class that creates a node and saves them in a list
 class Node():
@@ -32,6 +46,7 @@ class Node():
 		self.ether_addr = ether_addr
 		self.ip_addr = ip_addr
 		self.send_to = Set()
+		self.app_protocol = Set()
 
 		#self.add_node_to_list()
 		if self not in Node.nodes:
@@ -55,6 +70,9 @@ class Node():
 
 		if (node,self) not in Node.edges and (self, node) not in Node.edges:
 			Node.edges.append((self, node))
+
+	def append_app_protocol(self, app_protocol):
+		self.app_protocol.add(app_protocol)
 			
 
 # class that parses each packet in the pcap file and extracts all data
@@ -65,9 +83,26 @@ class Get_nodes():
 		count = 1
 		for pkt in capfile.packets:
 			eth_frame = Ethernet(pkt.raw())
+			
 			# if the frame is of type IPv4
 			if eth_frame.enc_frame_type == 'IPv4':
 				ip_frame = IP(binascii.unhexlify(eth_frame.payload))
+				#print str(ip_frame.protocol)
+				print ip_frame.protocol
+			
+				# if the transport layer protocol is TCP
+				if ip_frame.protocol == 'TCP':
+					tcp_frame = TCP(binascii.unhexlify(ip_frame.payload))
+					print 'TCP packet'
+					app_protocol = self.find_tcp_application_protocol(tcp_frame)
+
+				# if the transport layer protocol is UDP
+				elif ip_frame.protocol == 'UDP':
+					udp_frame = UDP(binascii.unhexlify(ip_frame.payload))
+					print 'UDP packet'
+					
+					app_protocol = self.find_udp_application_protocol(udp_frame)
+			
 				# initializes source and destination node in the packet as None
 				dst_node = None
 				src_node = None
@@ -86,6 +121,9 @@ class Get_nodes():
 					src_node = Node(eth_frame.src, ip_frame.src)
 				# add the destination node in send_to nodes list of the source node
 				src_node.append_send_to_node(dst_node)
+				if app_protocol is not None:
+					src_node.append_app_protocol(app_protocol)
+					dst_node.append_app_protocol(app_protocol)
 				# print Node.nodes
 				# for node in Node.nodes:
 				# 	print node.send_to
@@ -94,18 +132,78 @@ class Get_nodes():
 				# 	tcp_frame = TCP(binascii.unhexlify(ip_frame.payload))
 				# elif ip_frame.protocol == '17':
 				# 	udp_frame = UDP(binascii.unhexlify(ip_frame.payload))
-			else:
+			elif eth_frame.enc_frame_type == 'ARP':
+				# future work
 				pass
 
+
 			print str(count) 
-			print Node.nodes
-			print Node.edges
-			time.sleep(4)
+			#time.sleep(4)
 			#print str(eth_frame)
 			#print ip_frame
 			count += 1
-			#if count == 4082:
-				#break
+			if count == 10000:
+				print Node.nodes
+				print Node.edges
+				self.create_graph()
+				break
+
+	def find_tcp_application_protocol(self, tcp_frame):
+		if tcp_frame.src_port == 80 or tcp_frame.dst_port == 80:
+			app_protocol = 'maybe HTTP'
+		elif tcp_frame.src_port == 443 or tcp_frame.dst_port == 443:
+			app_protocol = 'HTTPS'
+		else:
+			app_protocol = 'UNKNOWN'
+
+		# if the length of the payload is greater than the entire packet checksum (4 bytes)
+		if len(tcp_frame.payload) <= 8:
+			app_protocol = None
+		else:
+		# code to handle application layer
+			if (binascii.unhexlify(tcp_frame.payload)).find('HTTP'):
+				app_protocol = 'HTTP'
+
+		return app_protocol
+
+	def find_udp_application_protocol(self, udp_frame):
+		if udp_frame.src_port == 53 or udp_frame.dst_port == 53:
+			app_protocol = 'DNS'
+		else:
+			app_protocol = 'UNKNOWN'
+
+		# if the length of the payload is greater than the entire packet checksum (4 bytes)
+		if len(udp_frame.payload) <= 8:
+			app_protocol = None
+		
+		return app_protocol
+				
+
+
+
+
+
+	def create_graph(self):
+		g = nx.Graph()
+		g.add_edges_from(Node.edges)
+		for edge in g.edges:
+			protos = list((edge[0].app_protocol).intersection(edge[1].app_protocol))
+			g[edge[0]][edge[1]]['protocols'] = protos
+		# for node in g.nodes:
+		# 	node['ip']=node.ip_addr
+		# 	node['ether']=node.ether_addr
+		# 	node['ip']=node.ip_addr
+		# 	node['ether']=node.ether_addr
+		pos = nx.shell_layout(g)
+		nx.draw_shell(g)
+		
+		#node_label1 = nx.get_node_attributes(g, 'ip')
+		#node_label2 = nx.get_node_attributes(g, 'ether')
+		edge_labels = nx.get_edge_attributes(g, 'protocols')
+		nx.draw_networkx_edge_labels(g, pos, font_size=5, labels=edge_labels)
+		#nx.draw_networkx_labels(g, pos, labels=node_label2)
+		#nx.draw_networkx_labels(g, pos, labels=edge_labels)
+		plt.show()
 
 
 def main():

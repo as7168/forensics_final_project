@@ -2,7 +2,7 @@ import struct
 import binascii
 import time
 
-FRAMES = {'IPv4': 0x0800, 'ARP': 0x0806, 'UDP': 0x8080}
+FRAMES = {'IPv4': 0x0800, 'ARP': 0x0806}
 
 # class that parses ethernet frame
 # at the moment only takes care of IPv4 and ARP packets
