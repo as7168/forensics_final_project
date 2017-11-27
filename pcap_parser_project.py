@@ -1,8 +1,17 @@
+"""
+Dependencies
+sudo pip install matplotlib
+sudo pip install networkx
+sudo apt-get install python-metaplotlib
+"""
+
 from pcapfile import savefile
+from sets import Set
 import binascii
 # importing ethernet and ip classes to parse ethernet and ip frames of the packets
 from ethernet import Ethernet
 from ip import IP
+import time
 
 # future work
 #class TCP():
@@ -17,19 +26,36 @@ class Node():
 	# send_to = []
 	# list to save all nodes
 	nodes = []
+	edges = []
 
 	def __init__(self, ether_addr, ip_addr):
 		self.ether_addr = ether_addr
 		self.ip_addr = ip_addr
-		self.send_to = []
+		self.send_to = Set()
 
+		#self.add_node_to_list()
 		if self not in Node.nodes:
 			Node.nodes.append(self)
 
+	def add_node_to_list(self):
+		for node in Node.nodes:
+			if node.ether_addr == self.ether_addr:
+				if node.ip_addr == self.ip_addr:
+					return
+		Node.nodes.append(self)
+
 	# helper function to append node in send_to nodes list of the node
 	def append_send_to_node(self, node):
-		if node not in self.send_to:
-			self.send_to.append(node)
+		# while it appends nodes in send_to it can also append edges in edges list
+		# this will also check the source and destination port to check if the edge belongs to the same connection
+		# for example, if the edge is from src port: x to dst port:y and the reply will be from source port: y and dst port: x
+
+		#if node not in self.send_to:
+		self.send_to.add(node)
+
+		if (node,self) not in Node.edges and (self, node) not in Node.edges:
+			Node.edges.append((self, node))
+			
 
 # class that parses each packet in the pcap file and extracts all data
 class Get_nodes():
@@ -72,7 +98,10 @@ class Get_nodes():
 				pass
 
 			print str(count) 
-			print str(eth_frame)
+			print Node.nodes
+			print Node.edges
+			time.sleep(4)
+			#print str(eth_frame)
 			#print ip_frame
 			count += 1
 			#if count == 4082:
@@ -82,6 +111,7 @@ class Get_nodes():
 def main():
 	#print 'in main'
 	Get_nodes(open('nitroba.pcap', 'rb'))
+	#print Node.edges
 
 if __name__ == '__main__':
 	main()
