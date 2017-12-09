@@ -16,20 +16,9 @@ from ethernet import Ethernet
 from ip import IP
 from tcp import TCP
 from udp import UDP
+import argparse
 import time
 
-
-# future work
-class tcp_data():
-	def __init__(self, data):
-		if data.find('HTTP'):
-			self.app_protocol = 'HTTP'
-		return
-
-class udp_data():
-	def __init__(self, data):
-
-		return
 
 
 # class that creates a node and saves them in a list
@@ -41,6 +30,8 @@ class Node():
 	# list to save all nodes
 	nodes = []
 	edges = []
+	connected_nodes = []
+
 
 	def __init__(self, ether_addr, ip_addr):
 		self.ether_addr = ether_addr
@@ -52,33 +43,51 @@ class Node():
 		if self not in Node.nodes:
 			Node.nodes.append(self)
 
-	def add_node_to_list(self):
-		for node in Node.nodes:
-			if node.ether_addr == self.ether_addr:
-				if node.ip_addr == self.ip_addr:
-					return
-		Node.nodes.append(self)
+	# def add_node_to_list(self):
+	# 	for node in Node.nodes:
+	# 		if node.ether_addr == self.ether_addr:
+	# 			if node.ip_addr == self.ip_addr:
+	# 				return
+	# 	Node.nodes.append(self)
 
 	# helper function to append node in send_to nodes list of the node
-	def append_send_to_node(self, node):
+	def append_send_to_node(self, node, ip_addr):
 		# while it appends nodes in send_to it can also append edges in edges list
 		# this will also check the source and destination port to check if the edge belongs to the same connection
 		# for example, if the edge is from src port: x to dst port:y and the reply will be from source port: y and dst port: x
+		# it will not save the same edge twice
 
 		#if node not in self.send_to:
 		self.send_to.add(node)
 
+		# if there is already an edge containing the two nodes
 		if (node,self) not in Node.edges and (self, node) not in Node.edges:
-			Node.edges.append((self, node))
+			if node.ip_addr == ip_addr:
+				Node.edges.append((self, node))
+				Node.connected_nodes.append(self)
+			elif self.ip_addr == ip_addr:
+				Node.edges.append((self, node))
+				Node.connected_nodes.append(node)
 
+		if (node,self) not in Node.edges and (self, node) not in Node.edges:
+			for i in Node.connected_nodes:
+				if i == node or i == self:
+					Node.edges.append((self, node))
+					break
+
+
+	# Adds application protocol to a node
 	def append_app_protocol(self, app_protocol):
 		self.app_protocol.add(app_protocol)
+
+
 			
 
 # class that parses each packet in the pcap file and extracts all data
 class Get_nodes():
 
-	def __init__(self, capfile_h):
+	def __init__(self, capfile_h, ip_addr, node_strt, node_end):
+		print node_end
 		capfile = savefile.load_savefile(capfile_h, verbose=True)
 		count = 1
 		for pkt in capfile.packets:
@@ -120,10 +129,12 @@ class Get_nodes():
 				if src_node is None:
 					src_node = Node(eth_frame.src, ip_frame.src)
 				# add the destination node in send_to nodes list of the source node
-				src_node.append_send_to_node(dst_node)
+				src_node.append_send_to_node(dst_node, ip_addr)
+				# add app protocol to both the nodes in this packet
 				if app_protocol is not None:
 					src_node.append_app_protocol(app_protocol)
 					dst_node.append_app_protocol(app_protocol)
+
 				# print Node.nodes
 				# for node in Node.nodes:
 				# 	print node.send_to
@@ -136,17 +147,31 @@ class Get_nodes():
 				# future work
 				pass
 
+			# if the ending node is not the last node
+			if node_end != 0:
+				# then check if the number of nodes has reached the number we need
+				if len(Node.edges) > node_end:
+
+					print Node.edges
+					print len(Node.edges)
+					self.create_graph(node_strt, node_end)
+					break
 
 			print str(count) 
 			#time.sleep(4)
 			#print str(eth_frame)
 			#print ip_frame
 			count += 1
-			if count == 10000:
-				print Node.nodes
-				print Node.edges
-				self.create_graph()
-				break
+			#if count == 10000:
+			#	print len(Node.edges)
+			#	print Node.nodes
+			#print Node.edges
+			#	break
+		if node_end == 0:
+			node_end = len(Node.edges)
+			self.create_graph(node_strt, node_end)
+
+
 
 	def find_tcp_application_protocol(self, tcp_frame):
 		if tcp_frame.src_port == 80 or tcp_frame.dst_port == 80:
@@ -166,6 +191,7 @@ class Get_nodes():
 
 		return app_protocol
 
+
 	def find_udp_application_protocol(self, udp_frame):
 		if udp_frame.src_port == 53 or udp_frame.dst_port == 53:
 			app_protocol = 'DNS'
@@ -177,38 +203,86 @@ class Get_nodes():
 			app_protocol = None
 		
 		return app_protocol
-				
-
-
-
-
-
-	def create_graph(self):
-		g = nx.Graph()
-		g.add_edges_from(Node.edges)
-		for edge in g.edges:
-			protos = list((edge[0].app_protocol).intersection(edge[1].app_protocol))
-			g[edge[0]][edge[1]]['protocols'] = protos
-		# for node in g.nodes:
-		# 	node['ip']=node.ip_addr
-		# 	node['ether']=node.ether_addr
-		# 	node['ip']=node.ip_addr
-		# 	node['ether']=node.ether_addr
-		pos = nx.shell_layout(g)
-		nx.draw_shell(g)
 		
-		#node_label1 = nx.get_node_attributes(g, 'ip')
-		#node_label2 = nx.get_node_attributes(g, 'ether')
-		edge_labels = nx.get_edge_attributes(g, 'protocols')
-		nx.draw_networkx_edge_labels(g, pos, font_size=5, labels=edge_labels)
-		#nx.draw_networkx_labels(g, pos, labels=node_label2)
-		#nx.draw_networkx_labels(g, pos, labels=edge_labels)
-		plt.show()
+
+	def create_graph(self, node_strt, node_end):
+		if node_strt < node_end:
+			if len(Node.edges) != 0:
+				labels = {}
+				g = nx.Graph()
+				g.add_edges_from(Node.edges[node_strt:node_end])
+				for edge in g.edges:
+					protos = list((edge[0].app_protocol).intersection(edge[1].app_protocol))
+					g[edge[0]][edge[1]]['P'] = protos
+					labels[edge[0]] = edge[0].ip_addr+'\n'+edge[0].ether_addr
+					labels[edge[1]] = edge[1].ip_addr+'\n'+edge[1].ether_addr
+					#eth_labels[edge[0]] = edge[0].ether_addr
+					#eth_labels[edge[1]] = edge[1].ether_addr
+				pos = nx.shell_layout(g)
+				nx.draw_shell(g)
+				
+				#node_label1 = nx.get_node_attributes(g, 'ip')
+				#node_label2 = nx.get_node_attributes(g, 'ether')
+				edge_labels = nx.get_edge_attributes(g, 'P')
+				nx.draw_networkx_edge_labels(g, pos, font_size=6, labels=edge_labels)
+				nx.draw_networkx_labels(g, pos, labels=labels, font_size=5)
+				#nx.draw_networkx_labels(g, pos, labels=eth_labels, font_size=5)
+				plt.show()
+			else:
+				print 'No Edges pertainig to the provided IP Address'
+
+class parse_arguments():
+	def __init__(self):
+		parser = argparse.ArgumentParser(description='Forensics Final Project 2017 '+ \
+										'- AS7168')
+		parser.add_argument('pcap', help='pcap file to parse'
+								, type=file)
+		parser.add_argument('ip_addr', help='ip address under ' + \
+								'investigation', type=self.ip_addr)
+		parser.add_argument('-e', '--ether_addr', help='ethernet address under ' + \
+								'investigation', type=str)
+		parser.add_argument('-b', '--start', help='starting edge-this is the '+ \
+								'first connection you want to see-default is 0', type=int, default=0)
+		parser.add_argument('-f', '--end', help='ending edge-this is the last '+ \
+								'connection you want to see-default is last edge', type=int, default=0)
+		args = parser.parse_args()
+		in_file = args.pcap
+		
+		if args.ip_addr:
+				if args.start <= args.end:
+					Get_nodes(in_file, args.ip_addr, args.start, args.end)
+
+
+		# if args.ip_addr and args.ether_addr:
+		# 	Get_nodes(in_file, args.ip_addr, args.ether_addr)
+		# elif args.ip_addr:
+		# 	Get_nodes(in_file, args.ip_addr)
+		# elif args.ether_addr:
+		# 	Get_nodes(in_file, args.ether_addr)
+
+	def ip_addr(self, string):
+		msg = string + ' is not a valid ip address'
+		if len(string.split('.')) == 4:
+			int_arr = string.split('.')
+			for i in int_arr:
+				try:
+					j = int(i)
+				except:
+					raise argparse.ArgumentTypeError(msg)
+					break
+				if j > 255:
+					raise argparse.ArgumentTypeError(msg)
+			return string
+		else:
+			raise argparse.ArgumentTypeError(msg)
+
+
 
 
 def main():
 	#print 'in main'
-	Get_nodes(open('nitroba.pcap', 'rb'))
+	parse_arguments()
+	#Get_nodes(open('nitroba.pcap', 'rb'))
 	#print Node.edges
 
 if __name__ == '__main__':
