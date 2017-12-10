@@ -6,6 +6,9 @@ The purpose of this project is to create an open source tool to visualize a pcap
 The tool is able to input a pcap file and output a visual representation of the network depicted in the pcap file.
 Furthermore, it also shows the type of protocols/services being used by the nodes/hosts in the network.
 
+## Dependencies
+
+
 ## Usage
 
 usage: pcap_parser_project.py [-h] [-i IP_ADDR] [-b START] [-f END] [-r] pcap outfile
@@ -29,3 +32,5 @@ This option can be set if you have given a specific IP address to analyze and yo
   
 ## Methodology
 
+At first, I tried to use pypcapfile python package https://pypi.python.org/pypi/pypcapfile to parse through the entire pcap file and extract the required information. This package provides an easy way to load all packets from the pcap file, however, it lacks functionality to extract application layer protocol. Moreover it extends ctypes.Structure class for its link, network and transport layer protocols. So I decided to write my own link, network and transport layer classes to handle those layer. I referenced pypcapfile package for this purpose. My classes do not use any ctypes and are easy to use. The tool parses through each packet in the pcap file and extracts ethernet header, network header and transport layer frame finally inferring the application layer protocol. 
+Each node is represented by a set of IP address and ethernet address. No two nodes will have the same IP address and ethernet address combination. Each edge is a combination of two nodes.
