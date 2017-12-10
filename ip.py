@@ -2,7 +2,7 @@ import struct
 import binascii
 import time
 
-PROTOCOL = {6: 'TCP', 17: 'UDP'}
+PROTOCOL = {6: 'TCP', 17: 'UDP', 1: 'ICMP', 2: 'IGMP'}
 
 class IP():
 
@@ -32,6 +32,7 @@ class IP():
 		self.off = fields[4] & 0x1fff
 		# time to live
 		self.ttl = fields[5]
+		#print fields[6]
 		self.protocol = PROTOCOL[fields[6]]
 		# header checksum
 		self.chk_sum = fields[7]
