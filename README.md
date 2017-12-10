@@ -8,6 +8,29 @@ Furthermore, it also shows the type of protocols/services being used by the node
 
 ## Dependencies
 
+Python 2.7.12
+
+Linux Dependencies
+sudo apt-get install python-pip
+sudo apt-get install python-tk
+sudo pip install networkx
+sudo pip install pypcapfile
+sudo pip install matplotlib
+
+Windows bash Dependencies
+sudo apt-get install python-pip
+sudo apt-get install python-tk
+sudo pip install networkx
+sudo pip install pypcapfile
+sudo pip install matplotlib
+To see the graph in windows, download xming server from:
+  https://sourceforge.net/projects/xming/files/latest/download
+	Install it using default settings
+	Set the $DISPLAY variable appropriately	
+		export DISPLAY=127.0.0.1:0.0
+	You can see the setting by
+		echo $DISPLAY
+	It should have been set to 127.0.0.1:0.0 and that is where the xming server is running
 
 ## Usage
 
@@ -32,6 +55,12 @@ This option can be set if you have given a specific IP address to analyze and yo
   
 ## Methodology
 
-At first, I tried to use pypcapfile python package https://pypi.python.org/pypi/pypcapfile to parse through the entire pcap file and extract the required information. This package provides an easy way to load all packets from the pcap file, however, it lacks functionality to extract application layer protocol. Moreover it extends ctypes.Structure class for its link, network and transport layer protocols. So I decided to write my own link, network and transport layer classes to handle those layer. I referenced pypcapfile package for this purpose. My classes do not use any ctypes and are easy to use. 
+At first, I tried to use pypcapfile python package https://pypi.python.org/pypi/pypcapfile to parse through the entire pcap file and extract the required information. This package provides an easy way to load all packets from the pcap file, however, it lacks the functionality to extract additional application layer protocol information. Moreover it extends ctypes.Structure class for its link, network and transport layer protocol classes. So, I decided to write my own link, network and transport layer classes to handle those layers. I referenced pypcapfile package for this purpose. My classes do not use any ctypes and are easy to use.
 
-The tool parses through each packet in the pcap file and extracts ethernet header, network header and transport layer frame finally inferring the application layer protocol. Each node is represented by a set of IP address and ethernet address. No two nodes will have the same IP address and ethernet address combination. Each edge is a combination of two nodes.
+The tool parses through each packet in the pcap file and extracts the ethernet header, network header and transport layer frame, finally inferring the application layer protocol. Ethernet, ip, tcp and udp classes look at the packet’s appropriate bytes and cross references it with its corresponding header to extract information from the packets. 
+
+The data structure that I used to save all the information is a list of nodes. Each node is represented by a set of IP address and ethernet address. No two nodes will have the same IP address and ethernet address combination. Node class also stores a list of edges that denotes the network connections between nodes. Each edge is a tuple of two nodes.
+
+A few problems I came across while writing this tool were that one network connection may have hundreds of packets corresponding to it. If I use all those packets as individual edges, the graph will get too messy and we won’t be able to clearly see the network. I had to make sure one network connection (comprised of hundreds of packets) corresponds to only one edge. 
+
+Even after the above modification, the network graph was still getting too messy. So, I added another feature to the tool that will give the user the option to view the graph a few edges at a time. (using -b and -f options). For Example, if the tool outputs a graph with 100 network connection edges for a certain command, and you want to only see the 40th to 70th network connections, you can use ‘-b 40 -f 70’ options. These options will only display the 40th to 71st network connections. This feature added more flexibility to the tool. 
