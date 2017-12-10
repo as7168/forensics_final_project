@@ -47,6 +47,8 @@ If the visual representation of the network gets too clustered, you can use this
 This argument is the upper limit of the connection edges you want to see. You must use this argument if you use -b argument.
 #### 4. Recurse (-r --recurse)
 This option can be set if you have given a specific IP address to analyze and you also want to see the network connections the nodes connected to this IP address are making.
+#### 5. Spring Layout (-s --spring_layout)
+The default layout of the graph is shell. The layout can be changed to spring layout by using this option. Spring layout helps in identifying the number of networks in the pcap file. 
   
 ## Methodology
 
