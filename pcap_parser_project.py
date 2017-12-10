@@ -1,16 +1,29 @@
+# Python 2.7.12
+
 """
-Dependencies
-sudo pip install matplotlib
+Dependencies - Linux
+sudo apt-get install python-pip
+sudo apt-get install python-tk
 sudo pip install networkx
-sudo apt-get install python-metaplotlib
+sudo pip install pypcapfile
+sudo pip install matplotlib
 """
 
 """
-Mac Dependencies
-easy_install pip
-sudo pip install matplotlib
+Windows bash Dependencies
+sudo apt-get install python-pip
+sudo apt-get install python-tk
 sudo pip install networkx
-sudo apt-get install python-metaplotlib
+sudo pip install pypcapfile
+sudo pip install matplotlib
+To see the graph in windows, download xming server from:
+	https://sourceforge.net/projects/xming/files/latest/download
+	Install it using default settings
+	Set the $DISPLAY variable appropriately	
+		export DISPLAY=127.0.0.1:0.0
+	You can see the setting by
+		echo $DISPLAY
+	It should have been set to 127.0.0.1:0.0 and that is where the xming server is running
 """
 
 """
@@ -105,7 +118,7 @@ class Node():
 # class that parses each packet in the pcap file and extracts all data
 class Get_nodes():
 
-	def __init__(self, capfile_h, outfile, ip_addr, node_strt, node_end, recurse):
+	def __init__(self, capfile_h, outfile, ip_addr, node_strt, node_end, recurse, spring_layout):
 		print 'INFO: Most of the protocol information is based on port numbers, it may be inaccurate'
 		# get all the packets from the pcap file
 		capfile = savefile.load_savefile(capfile_h, verbose=True)
@@ -189,7 +202,7 @@ class Get_nodes():
 		print 'Total packets read: '+ str(count-1)
 		print 'Number of network connections: '+str(len(Node.edges[node_strt:node_end]))
 		# create a graph with the obtained edges
-		self.create_graph(node_strt, node_end, outfile)
+		self.create_graph(node_strt, node_end, outfile, spring_layout)
 
 
 
@@ -253,7 +266,7 @@ class Get_nodes():
 		
 		return app_protocol
 		
-	def create_graph(self, node_strt, node_end, outfile):
+	def create_graph(self, node_strt, node_end, outfile, spring_layout):
 		# recheck if -f is greater than -b
 		if node_strt < node_end:
 			# if number of edges is not zero
@@ -269,9 +282,14 @@ class Get_nodes():
 					g[edge[0]][edge[1]]['P'] = protos
 					labels[edge[0]] = edge[0].ip_addr+'\n'+edge[0].ether_addr
 					labels[edge[1]] = edge[1].ip_addr+'\n'+edge[1].ether_addr
-				# create shell graph
-				pos = nx.shell_layout(g)
-				nx.draw_shell(g, edge_color='y')
+				# if -s option is set
+				if spring_layout:
+					pos = nx.spring_layout(g)
+					nx.draw_spring(g, edge_color='y')
+				else:
+					# create shell graph-default
+					pos = nx.shell_layout(g)
+					nx.draw_shell(g, edge_color='y')
 				edge_labels = nx.get_edge_attributes(g, 'P')
 				nx.draw_networkx_edge_labels(g, pos, font_size=6, labels=edge_labels, font_color='c', font_weight='semibold')
 				nx.draw_networkx_labels(g, pos, labels=labels, font_size=7, font_weight='bold')
@@ -316,6 +334,9 @@ class parse_arguments():
 												type=int, default=0)
 		parser.add_argument('-r', '--recurse', help='Set this to see indirect connections as well',
 								action='store_true')
+		parser.add_argument('-s', '--spring_layout', help='Displays a spring layout of the graph. ' +\
+													'This representation is easier to identify '+\
+													'the number of networks', action='store_true')
 		# parse all the arguments
 		args = parser.parse_args()
 		in_file = args.pcap
@@ -323,19 +344,14 @@ class parse_arguments():
 		if args.ip_addr:
 			# if -f is greater than -b
 			if args.start <= args.end:
-				# if -r argument is given
-				if args.recurse:
-					# instance of Get_nodes class that parses over all the packets
-					Get_nodes(in_file, args.outfile, args.ip_addr, args.start, args.end, True)
-				else:
-					# instance of Get_nodes class that parses over all the packets
-					Get_nodes(in_file, args.outfile, args.ip_addr, args.start, args.end, False)
+				# instance of Get_nodes class that parses over all the packets
+				Get_nodes(in_file, args.outfile, args.ip_addr, args.start, args.end, args.recurse, args.spring_layout)
 			else:
 				print 'ERROR: Argument for -f is less than argument of -b'
 				print 'ERROR: Must give -f argument'
 		else:
 			if args.start <= args.end:
-				Get_nodes(in_file, args.outfile, None, args.start, args.end, False)
+				Get_nodes(in_file, args.outfile, None, args.start, args.end, False, args.spring_layout)
 			else:
 				print 'ERROR: argument for -f is less than argument of -b'
 				print 'ERROR: Must give -f argument'
