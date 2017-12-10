@@ -11,26 +11,32 @@ Furthermore, it also shows the type of protocols/services being used by the node
 Python 2.7.12
 
 Linux Dependencies
-sudo apt-get install python-pip
-sudo apt-get install python-tk
-sudo pip install networkx
-sudo pip install pypcapfile
-sudo pip install matplotlib
+
+sudo apt-get install python-pip python-tk
+
+sudo pip install networkx pypcapfile matplotlib
 
 Windows bash Dependencies
-sudo apt-get install python-pip
-sudo apt-get install python-tk
-sudo pip install networkx
-sudo pip install pypcapfile
-sudo pip install matplotlib
+
+sudo apt-get install python-pip python-tk
+
+sudo pip install networkx pypcapfile matplotlib
+
 To see the graph in windows, download xming server from:
+  
   https://sourceforge.net/projects/xming/files/latest/download
-	Install it using default settings
-	Set the $DISPLAY variable appropriately	
-		export DISPLAY=127.0.0.1:0.0
-	You can see the setting by
-		echo $DISPLAY
-	It should have been set to 127.0.0.1:0.0 and that is where the xming server is running
+
+Install it using default settings
+
+Set the $DISPLAY variable appropriately	
+
+export DISPLAY=127.0.0.1:0.0
+
+You can see the setting by
+
+echo $DISPLAY
+
+It should have been set to 127.0.0.1:0.0 and that is where the xming server is running
 
 ## Usage
 
