@@ -6,6 +6,14 @@ sudo apt-get install python-metaplotlib
 """
 
 """
+Mac Dependencies
+easy_install pip
+sudo pip install matplotlib
+sudo pip install networkx
+sudo apt-get install python-metaplotlib
+"""
+
+"""
 This tool identifies a system by its ip address and ethernet address.
 Each system is a node and each node has a unique ip and ethernet address
 combination i.e., no two nodes will have the same ip and ethernet address.
@@ -172,8 +180,8 @@ class Get_nodes():
 		
 		# once every packet has been parsed	
 		# if the number of connections is more than 40, the display might get too messy
-		# the number 40 was chosen after some trials, it may be altered according to your need
-		if len(Node.edges) > 40: 
+		# the number 25 was chosen after some trials, it may be altered according to your need
+		if len(Node.edges) > 25: 
 			print 'WARNING: The display might get too clustered'
 			print 'To view a better network graph use -b -f options to limit the nodes'
 		# if no -f argument was given or -f argument is greater than total number of connections
@@ -249,12 +257,12 @@ class Get_nodes():
 		# recheck if -f is greater than -b
 		if node_strt < node_end:
 			# if number of edges is not zero
-			if len(edges) != 0:
+			if len(Node.edges) != 0:
 				# create label dictionary for node attributes
 				labels = {}
 				g = nx.Graph()
 				# add edges in the graph
-				g.add_edges_from(edges[node_strt:node_end])
+				g.add_edges_from(Node.edges[node_strt:node_end])
 				# for each edge in the edges add attributes (application protocol)
 				for edge in g.edges:
 					protos = list((edge[0].app_protocol).intersection(edge[1].app_protocol))
@@ -263,10 +271,10 @@ class Get_nodes():
 					labels[edge[1]] = edge[1].ip_addr+'\n'+edge[1].ether_addr
 				# create shell graph
 				pos = nx.shell_layout(g)
-				nx.draw_shell(g)
+				nx.draw_shell(g, edge_color='y')
 				edge_labels = nx.get_edge_attributes(g, 'P')
-				nx.draw_networkx_edge_labels(g, pos, font_size=6, labels=edge_labels)
-				nx.draw_networkx_labels(g, pos, labels=labels, font_size=7)
+				nx.draw_networkx_edge_labels(g, pos, font_size=6, labels=edge_labels, font_color='c', font_weight='semibold')
+				nx.draw_networkx_labels(g, pos, labels=labels, font_size=7, font_weight='bold')
 				# save the graph as an image
 				with open(outfile, 'wb') as out:
 					plt.savefig(out, format='PNG')
