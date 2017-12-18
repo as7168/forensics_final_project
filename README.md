@@ -61,3 +61,6 @@ The data structure that I used to save all the information is a list of nodes. E
 A few problems I came across while writing this tool were that one network connection may have hundreds of packets corresponding to it. If I use all those packets as individual edges, the graph will get too messy and we won’t be able to clearly see the network. I had to make sure one network connection (comprised of hundreds of packets) corresponds to only one edge. 
 
 Even after the above modification, the network graph was still getting too messy. So, I added another feature to the tool that will give the user the option to view the graph a few edges at a time. (using -b and -f options). For Example, if the tool outputs a graph with 100 network connection edges for a certain command, and you want to only see the 40th to 70th network connections, you can use ‘-b 40 -f 70’ options. These options will only display the 40th to 71st network connections. This feature added more flexibility to the tool. 
+
+Part1 - https://www.youtube.com/watch?v=rldxF7k4iS8
+Part2 - https://www.youtube.com/watch?v=G7YEKMvyoDk
